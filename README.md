@@ -29,6 +29,8 @@ Run the Ansible playbook to install Prometheus on the monitoring server:
 ansible-playbook -i inventory.ini install_prometheus.yml --ask-become-pass
 ```
 
+![install prometheus](ss/01.png "install prometheus")
+
 Access Prometheus web UI:
 
 ```text
@@ -43,6 +45,8 @@ Run the Ansible playbook to install and configure Node Exporter:
 ansible-playbook -i inventory.ini install_node_exporter.yml --ask-become-pass
 ```
 
+![install node exporter](ss/02.png "install node exporter")
+
 ### 3️⃣ Configure Prometheus to Scrape Node Exporter Metrics Using Ansible
 
 Run the Ansible playbook to update Prometheus configuration:
@@ -50,6 +54,8 @@ Run the Ansible playbook to update Prometheus configuration:
 ```bash
 ansible-playbook -i inventory.ini update_prometheus.yml --ask-become-pass
 ```
+
+![configure prometheus](ss/03.png "configure prometheus")
 
 This will modify `prometheus.yml` to include Ubuntu VMs:
 
@@ -69,6 +75,8 @@ scrape_configs:
           - "192.168.1.64:9100"
 ```
 
+![prometheus and node exporter connected](ss/04.png "prometheus and node exporter connected")
+
 ### 4️⃣ Install Grafana
 
 Run the Ansible playbook to install Grafana:
@@ -76,6 +84,8 @@ Run the Ansible playbook to install Grafana:
 ```bash
 ansible-playbook -i inventory.ini install_grafana.yml --ask-become-pass
 ```
+
+![install grafana](ss/05.png "install grafana")
 
 Access Grafana web UI:
 
