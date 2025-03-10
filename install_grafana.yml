@@ -1,0 +1,43 @@
+---
+- name: Install Grafana on Monitoring Server
+  hosts: mintdesktop
+  become: yes
+
+  tasks:
+    - name: Add Grafana APT repository key
+      ansible.builtin.shell:
+        cmd: |
+          wget -q -O - https://packages.grafana.com/gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/grafana-keyring.gpg > /dev/null
+
+    - name: Add Grafana APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/grafana-keyring.gpg] https://packages.grafana.com/oss/deb stable main"
+        state: present
+        filename: grafana
+
+    - name: Update APT package index
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Grafana
+      ansible.builtin.apt:
+        name: grafana
+        state: present
+
+    - name: Enable and start Grafana service
+      ansible.builtin.systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
+
+    - name: Open Grafana port (3000) in firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 3000
+        jump: ACCEPT
+      ignore_errors: yes  # Ignore if iptables is not used
+
+    - name: Print Grafana access info
+      ansible.builtin.debug:
+        msg: "Grafana is now running at http://{{ ansible_host }}:3000. Default login: admin / admin"

@@ -1,0 +1,108 @@
+- name: Install Prometheus
+  hosts: mintdesktop
+  become: yes
+
+  tasks:
+    - name: Create Prometheus user
+      ansible.builtin.user:
+        name: prometheus
+        shell: /sbin/nologin
+        create_home: no
+
+    - name: Download Prometheus
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz"
+        dest: "/tmp/prometheus.tar.gz"
+
+    - name: Extract Prometheus
+      ansible.builtin.unarchive:
+        src: "/tmp/prometheus.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Move Prometheus binaries
+      ansible.builtin.command:
+        cmd: mv /tmp/prometheus-2.51.2.linux-amd64/prometheus /usr/local/bin/
+      args:
+        removes: /tmp/prometheus-2.51.2.linux-amd64/prometheus
+
+    - name: Move Promtool binary
+      ansible.builtin.command:
+        cmd: mv /tmp/prometheus-2.51.2.linux-amd64/promtool /usr/local/bin/
+      args:
+        removes: /tmp/prometheus-2.51.2.linux-amd64/promtool
+
+    - name: Set permissions for Prometheus binaries
+      ansible.builtin.file:
+        path: "/usr/local/bin/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Create Prometheus directories
+      ansible.builtin.file:
+        path: "/etc/prometheus"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+
+    - name: Check if configuration files exist
+      ansible.builtin.stat:
+        path: "/tmp/prometheus-2.51.2.linux-amd64/{{ item }}"
+      register: file_stat
+      loop:
+        - consoles
+        - console_libraries
+        - prometheus.yml
+
+    - name: Move Prometheus configuration files (only if present)
+      ansible.builtin.command:
+        cmd: mv /tmp/prometheus-2.51.2.linux-amd64/{{ item }} /etc/prometheus/
+      when: file_stat.results[item_index].stat.exists
+      loop: 
+        - consoles
+        - console_libraries
+        - prometheus.yml
+      loop_control:
+        index_var: item_index
+
+    - name: Set ownership for Prometheus configuration files
+      ansible.builtin.file:
+        path: "/etc/prometheus/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      loop:
+        - consoles
+        - console_libraries
+        - prometheus.yml
+      ignore_errors: yes
+
+    - name: Create Prometheus systemd service file
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/prometheus.service"
+        content: |
+          [Unit]
+          Description=Prometheus
+          After=network.target
+          
+          [Service]
+          User=prometheus
+          Group=prometheus
+          ExecStart=/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus/
+          Restart=always
+          
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart Prometheus
+
+  handlers:
+    - name: Restart Prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
+        enabled: yes

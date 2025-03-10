@@ -1,0 +1,23 @@
+- name: Update Prometheus Configuration
+  hosts: mintdesktop
+  become: yes
+
+  tasks:
+    - name: Backup existing prometheus.yml
+      ansible.builtin.copy:
+        src: /etc/prometheus/prometheus.yml
+        dest: /etc/prometheus/prometheus.yml.bak
+        remote_src: yes
+        mode: '0644'
+
+    - name: Update prometheus.yml with Ubuntu VMs as scrape targets
+      ansible.builtin.template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+        mode: '0644'
+
+    - name: Restart Prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
+        enabled: yes
